@@ -8,9 +8,9 @@ import { getSupabaseClient } from '../supabaseClient';
  * Wraps a route element and ensures only authenticated users can access it.
  * Redirects to /login with a redirect parameter if user is not authenticated.
  *
- * Fixes:
- * - Ensure we always clear "loading" on auth state changes so the UI doesn't get stuck on "Checking authentication..."
- * - Add a small safety timeout to avoid indefinite loading in edge cases where no auth event arrives.
+ * Enhancements:
+ * - Robust logging around session fetch and auth state changes to debug stuck states.
+ * - Safety timeout ensures we never hang indefinitely on "Checking authentication...".
  */
 export default function ProtectedRoute({ children }) {
   const supabase = getSupabaseClient();
@@ -25,11 +25,15 @@ export default function ProtectedRoute({ children }) {
     async function fetchSession() {
       // Safety timer to prevent indefinite "checking..." in edge cases
       safetyTimer = window.setTimeout(() => {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          console.debug('[ProtectedRoute] Safety timer fired: clearing loading');
+          setLoading(false);
+        }
       }, 4000);
 
       if (!supabase) {
         if (mounted) {
+          console.debug('[ProtectedRoute] Supabase client unavailable; treating as unauthenticated');
           setSessionUser(null);
           setLoading(false);
         }
@@ -37,13 +41,16 @@ export default function ProtectedRoute({ children }) {
       }
 
       try {
+        console.debug('[ProtectedRoute] Fetching current session...');
         const {
           data: { session },
         } = await supabase.auth.getSession();
         if (!mounted) return;
+        console.debug('[ProtectedRoute] getSession result:', !!session, session?.user?.email);
         setSessionUser(session?.user ?? null);
         setLoading(false);
-      } catch (_e) {
+      } catch (err) {
+        console.warn('[ProtectedRoute] getSession error:', err);
         if (mounted) {
           setSessionUser(null);
           setLoading(false);
@@ -53,11 +60,12 @@ export default function ProtectedRoute({ children }) {
 
     fetchSession();
 
+    // Subscribe to auth state changes to keep session in sync
     let unsubscribe = () => {};
     if (supabase) {
-      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      const { data } = supabase.auth.onAuthStateChange((event, session) => {
         if (!mounted) return;
-        // Update user and explicitly clear loading when we get any auth event.
+        console.debug('[ProtectedRoute] onAuthStateChange event:', event, 'user:', !!session?.user);
         setSessionUser(session?.user ?? null);
         setLoading(false);
       });
@@ -68,7 +76,11 @@ export default function ProtectedRoute({ children }) {
     return () => {
       mounted = false;
       if (safetyTimer) window.clearTimeout(safetyTimer);
-      unsubscribe();
+      try {
+        unsubscribe();
+      } catch (e) {
+        // ignore
+      }
     };
   }, [supabase]);
 
@@ -78,6 +90,7 @@ export default function ProtectedRoute({ children }) {
 
   if (!sessionUser) {
     const redirectTo = encodeURIComponent(location.pathname + location.search);
+    console.debug('[ProtectedRoute] No session found; redirecting to login with redirect:', redirectTo);
     return <Navigate to={`/login?redirect=${redirectTo}`} replace />;
   }
 
