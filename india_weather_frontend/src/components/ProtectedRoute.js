@@ -16,10 +16,13 @@ export default function ProtectedRoute({ children }) {
 
   useEffect(() => {
     let mounted = true;
+
     async function fetchSession() {
       if (!supabase) {
-        setLoading(false);
-        setSessionUser(null);
+        if (mounted) {
+          setSessionUser(null);
+          setLoading(false);
+        }
         return;
       }
       const {
@@ -30,15 +33,22 @@ export default function ProtectedRoute({ children }) {
         setLoading(false);
       }
     }
+
     fetchSession();
+
     if (supabase) {
-      const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
         if (mounted) {
           setSessionUser(session?.user ?? null);
         }
       });
-      return () => subscription?.subscription?.unsubscribe?.();
+
+      return () => {
+        mounted = false;
+        authListener?.subscription?.unsubscribe?.();
+      };
     }
+
     return () => {
       mounted = false;
     };
