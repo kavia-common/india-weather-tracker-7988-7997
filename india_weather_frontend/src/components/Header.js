@@ -25,13 +25,20 @@ export default function Header() {
   const unsubscribeRef = useRef(null); // keep unsubscribe to cleanly detach on unmount
   const logoutInProgressRef = useRef(false); // prevent races
 
+  // Debug helper to log every render with user snapshot
+  useEffect(() => {
+    console.debug('[Header][render] user:', user ? user.email : null);
+  });
+
   useEffect(() => {
     mountedRef.current = true;
+    console.debug('[Header][mount] mounted, StrictMode can double-invoke effects in dev.');
     return () => {
       mountedRef.current = false;
       try {
         // Ensure we unsubscribe from auth state changes to avoid delayed re-renders after logout
         unsubscribeRef.current?.();
+        console.debug('[Header][unmount] unsubscribed auth listener to avoid stale updates.');
       } catch {
         // ignore
       }
@@ -63,14 +70,18 @@ export default function Header() {
     let mounted = true;
 
     async function getSession() {
-      if (!supabase) return;
+      if (!supabase) {
+        console.debug('[Header] Supabase client unavailable on getSession; treating as logged out.');
+        if (mounted) setUser(null);
+        return;
+      }
       try {
         const t0 = performance.now();
         const {
           data: { session },
         } = await supabase.auth.getSession();
         const dt = performance.now() - t0;
-        console.debug('[Header] getSession duration(ms):', Math.round(dt), 'session?', !!session);
+        console.debug('[Header] getSession duration(ms):', Math.round(dt), 'session?', !!session, 'email:', session?.user?.email);
         if (mounted) setUser(session?.user ?? null);
       } catch (e) {
         // If session fetch fails, treat as logged out
@@ -82,11 +93,12 @@ export default function Header() {
 
     if (supabase) {
       const { data } = supabase.auth.onAuthStateChange((event, session) => {
-        console.debug('[Header] onAuthStateChange:', event, 'user?', !!session?.user);
+        console.debug('[Header] onAuthStateChange:', event, 'user?', !!session?.user, 'email:', session?.user?.email);
         if (!mountedRef.current) return;
 
         // When logging out, we force-clear UI state immediately and ignore any late auth events
         if (logoutInProgressRef.current) {
+          console.debug('[Header] onAuthStateChange ignored because logout is in progress.');
           return;
         }
         // Keep local user in sync with Supabase auth state
@@ -98,10 +110,12 @@ export default function Header() {
         data?.subscription?.unsubscribe?.bind(data.subscription) ||
         (() => {});
       unsubscribeRef.current = unsub;
+      console.debug('[Header] Subscribed to auth state changes.');
 
       return () => {
         try {
           unsub();
+          console.debug('[Header] Unsubscribed from auth state changes (effect cleanup).');
         } catch {
           // ignore
         }
@@ -113,7 +127,10 @@ export default function Header() {
   // PUBLIC_INTERFACE
   const handleLogout = async () => {
     // Guard against double clicks
-    if (logoutInProgressRef.current) return;
+    if (logoutInProgressRef.current) {
+      console.debug('[Header] Logout clicked while already in progress; ignoring.');
+      return;
+    }
     logoutInProgressRef.current = true;
 
     const tStart = performance.now();
@@ -123,19 +140,23 @@ export default function Header() {
     };
 
     // Clear UI state right away for instantaneous feedback and hide user info
+    console.debug('[Header] handleLogout: clearing local user state immediately.');
     setUser(null);
 
     // Detach auth state listener immediately to avoid re-setting user from any late events
     try {
-      unsubscribeRef.current?.();
-      unsubscribeRef.current = null;
-    } catch {
-      // ignore
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+        console.debug('[Header] handleLogout: unsubscribed existing auth listener to avoid stale updates.');
+      }
+    } catch (e) {
+      console.debug('[Header] handleLogout: unsubscribe threw (ignored):', e);
     }
 
     const finish = () => {
       const total = performance.now() - tStart;
-      console.debug('[Header] Logout initiated; total time to trigger navigation(ms):', Math.round(total));
+      console.debug('[Header] Logout initiated; time to trigger navigation(ms):', Math.round(total));
       navToLogin();
     };
 

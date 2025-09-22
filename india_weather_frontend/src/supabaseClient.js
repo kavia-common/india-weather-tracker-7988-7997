@@ -23,7 +23,13 @@ export function getSupabaseClient() {
     return null;
   }
 
-  return createClient(url, key);
+  const client = createClient(url, key);
+  try {
+    console.debug('[SupabaseClient] Created client with provided env vars.');
+  } catch {
+    // ignore
+  }
+  return client;
 }
 
 /**
