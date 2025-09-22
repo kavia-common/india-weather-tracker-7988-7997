@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 
 /**
  * PUBLIC_INTERFACE
@@ -20,7 +20,10 @@ export default function WeatherBackground({
   scope = 'container',
   children,
 }) {
-  const theme = pickBackgroundTheme(weatherCode, conditionText);
+  const theme = useMemo(
+    () => pickBackgroundTheme(weatherCode, conditionText),
+    [weatherCode, conditionText]
+  );
 
   useEffect(() => {
     if (scope !== 'document') return;
@@ -29,7 +32,6 @@ export default function WeatherBackground({
     const body = document.body;
 
     const previous = {
-      bg: root.style.getPropertyValue('--bg'),
       gradStart: root.style.getPropertyValue('--grad-start'),
       gradEnd: root.style.getPropertyValue('--grad-end'),
       pageBgImage: body.style.backgroundImage,
@@ -48,7 +50,7 @@ export default function WeatherBackground({
       body.style.backgroundSize = theme.imageSize || 'cover, auto';
       body.style.backgroundPosition = theme.imagePosition || 'center, center';
       body.style.backgroundAttachment = theme.imageAttachment || 'fixed, scroll';
-      body.style.backgroundBlendMode = theme.imageBlendMode || 'overlay, normal';
+      body.style.backgroundBlendMode = theme.imageBlendMode || 'multiply, normal';
     } else {
       body.style.backgroundImage = `linear-gradient(180deg, ${theme.gradStart}, ${theme.gradEnd})`;
       body.style.backgroundSize = '';
@@ -81,7 +83,7 @@ export default function WeatherBackground({
     backgroundSize: theme.image ? (theme.imageSize || 'cover, auto') : 'auto',
     backgroundPosition: theme.image ? (theme.imagePosition || 'center, center') : 'center',
     backgroundAttachment: theme.image ? (theme.imageAttachment || 'fixed, scroll') : 'scroll',
-    backgroundBlendMode: theme.image ? (theme.imageBlendMode || 'overlay, normal') : 'normal',
+    backgroundBlendMode: theme.image ? (theme.imageBlendMode || 'multiply, normal') : 'normal',
     minHeight: '100%',
     width: '100%',
   };
@@ -89,14 +91,14 @@ export default function WeatherBackground({
   return <div style={wrapperStyle}>{children}</div>;
 }
 
-// PUBLIC_INTERFACE
+/**
+ * PUBLIC_INTERFACE
+ * pickBackgroundTheme
+ * Selects a photographic "live sky" background and overlay settings that match the
+ * current weather. Uses images located under /public/assets/backgrounds/live_skies/.
+ * Ensures high readability with multiply/overlay blending and adaptive tints.
+ */
 export function pickBackgroundTheme(code, text) {
-  /**
-   * Returns a style descriptor for background selection:
-   * {
-   *   gradStart, gradEnd, image?, imageSize?, imagePosition?, imageAttachment?, imageBlendMode?
-   * }
-   */
   const normalized = (text || '').toLowerCase();
 
   // Group codes based on Open-Meteo documentation
@@ -128,80 +130,88 @@ export function pickBackgroundTheme(code, text) {
     else kind = 'clear';
   }
 
-  // Use modern gradients with royalty-free imagery from /public/assets/backgrounds.
-  // We apply a semi-transparent dark overlay via backgroundBlendMode to ensure text readability.
-  // Note: public assets are served from root as /assets/...
+  // Time-of-day tinting for subtle realism (dawn/dusk warmer, night darker)
+  const hour = new Date().getHours();
+  const isNight = hour >= 20 || hour < 5;
+  const isDawnDusk = (hour >= 5 && hour < 8) || (hour >= 17 && hour < 20);
+
+  const base = {
+    imageSize: 'cover, auto',
+    imagePosition: 'center, center',
+    imageAttachment: 'fixed, scroll',
+  };
+
+  // Base overlays for readability
+  const overlays = {
+    strongDark: { gradStart: 'rgba(2,6,23,0.55)', gradEnd: 'rgba(15,23,42,0.45)', imageBlendMode: 'multiply, normal' },
+    dark: { gradStart: 'rgba(17,24,39,0.45)', gradEnd: 'rgba(17,24,39,0.25)', imageBlendMode: 'multiply, normal' },
+    blue: { gradStart: 'rgba(29,78,216,0.35)', gradEnd: 'rgba(59,130,246,0.22)', imageBlendMode: 'multiply, normal' },
+    rain: { gradStart: 'rgba(30,58,138,0.55)', gradEnd: 'rgba(2,6,23,0.35)', imageBlendMode: 'multiply, normal' },
+    thunder: { gradStart: 'rgba(2,6,23,0.65)', gradEnd: 'rgba(30,27,75,0.55)', imageBlendMode: 'overlay, normal' },
+    fog: { gradStart: 'rgba(17,24,39,0.40)', gradEnd: 'rgba(17,24,39,0.18)', imageBlendMode: 'multiply, normal' },
+    snow: { gradStart: 'rgba(15,23,42,0.28)', gradEnd: 'rgba(241,245,249,0.30)', imageBlendMode: 'multiply, normal' },
+  };
+
+  // Dawn/dusk warmth
+  const warmTint = isDawnDusk ? { gradStart: 'rgba(245,158,11,0.22)', gradEnd: 'rgba(59,130,246,0.20)', imageBlendMode: 'overlay, normal' } : null;
+  // Night darkening
+  const nightTint = isNight ? { gradStart: 'rgba(2,6,23,0.60)', gradEnd: 'rgba(2,6,23,0.40)', imageBlendMode: 'multiply, normal' } : null;
+
+  const withTint = (overlay) => {
+    if (isNight) {
+      return { ...overlay, ...(nightTint || {}) };
+    }
+    if (isDawnDusk) {
+      // Blend slightly warmer at edges while keeping readability
+      return { ...overlay, gradStart: warmTint.gradStart, gradEnd: overlay.gradEnd, imageBlendMode: overlay.imageBlendMode };
+    }
+    return overlay;
+  };
+
+  // Map each kind to a live sky image (photo) in /assets/backgrounds/live_skies/
   switch (kind) {
     case 'cloudy':
       return {
-        gradStart: 'rgba(17,24,39,0.40)', // dark overlay for contrast
-        gradEnd: 'rgba(17,24,39,0.15)',
-        image: 'url("/assets/backgrounds/cloudy.jpg")',
-        imageSize: 'cover, auto',
-        imagePosition: 'center, center',
-        imageAttachment: 'fixed, scroll',
-        imageBlendMode: 'multiply, normal',
+        ...base,
+        ...withTint(overlays.dark),
+        image: 'url("/assets/backgrounds/live_skies/sky_cloudy_overcast.jpg")',
       };
     case 'fog':
       return {
-        gradStart: 'rgba(17,24,39,0.35)',
-        gradEnd: 'rgba(17,24,39,0.15)',
-        image: 'url("/assets/backgrounds/fog.jpg")',
-        imageSize: 'cover, auto',
-        imagePosition: 'center, center',
-        imageAttachment: 'fixed, scroll',
-        imageBlendMode: 'multiply, normal',
+        ...base,
+        ...withTint(overlays.fog),
+        image: 'url("/assets/backgrounds/live_skies/sky_fog_mist.jpg")',
       };
     case 'drizzle':
       return {
-        gradStart: 'rgba(37,99,235,0.35)', // blue tint for drizzle
-        gradEnd: 'rgba(17,24,39,0.15)',
-        image: 'url("/assets/backgrounds/rain.jpg")',
-        imageSize: 'cover, auto',
-        imagePosition: 'center, center',
-        imageAttachment: 'fixed, scroll',
-        imageBlendMode: 'overlay, normal',
+        ...base,
+        ...withTint(overlays.rain),
+        image: 'url("/assets/backgrounds/live_skies/sky_drizzle.jpg")',
       };
     case 'rain':
       return {
-        gradStart: 'rgba(30,58,138,0.55)', // darker blue overlay
-        gradEnd: 'rgba(2,6,23,0.35)',
-        image: 'url("/assets/backgrounds/rain.jpg")',
-        imageSize: 'cover, auto',
-        imagePosition: 'center, center',
-        imageAttachment: 'fixed, scroll',
-        imageBlendMode: 'multiply, normal',
+        ...base,
+        ...withTint(overlays.rain),
+        image: 'url("/assets/backgrounds/live_skies/sky_rain_showers.jpg")',
       };
     case 'snow':
       return {
-        gradStart: 'rgba(15,23,42,0.30)',
-        gradEnd: 'rgba(248,250,252,0.30)',
-        image: 'url("/assets/backgrounds/snow.jpg")',
-        imageSize: 'cover, auto',
-        imagePosition: 'center, center',
-        imageAttachment: 'fixed, scroll',
-        imageBlendMode: 'multiply, normal',
+        ...base,
+        ...withTint(overlays.snow),
+        image: 'url("/assets/backgrounds/live_skies/sky_snow.jpg")',
       };
     case 'thunder':
       return {
-        gradStart: 'rgba(2,6,23,0.65)',
-        gradEnd: 'rgba(30,27,75,0.55)',
-        image: 'url("/assets/backgrounds/thunder.jpg")',
-        imageSize: 'cover, auto',
-        imagePosition: 'center, center',
-        imageAttachment: 'fixed, scroll',
-        imageBlendMode: 'overlay, normal',
+        ...base,
+        ...withTint(overlays.thunder),
+        image: 'url("/assets/backgrounds/live_skies/sky_thunderstorm.jpg")',
       };
     case 'clear':
     default:
       return {
-        gradStart: 'rgba(29,78,216,0.30)', // blue overlay
-        gradEnd: 'rgba(59,130,246,0.18)',
-        image: 'url("/assets/backgrounds/sunny.jpg")',
-        imageSize: 'cover, auto',
-        imagePosition: 'center, center',
-        imageAttachment: 'fixed, scroll',
-        imageBlendMode: 'multiply, normal',
+        ...base,
+        ...withTint(overlays.blue),
+        image: 'url("/assets/backgrounds/live_skies/sky_clear_sunny.jpg")',
       };
   }
 }
