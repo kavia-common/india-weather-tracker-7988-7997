@@ -3,6 +3,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
+// NOTE: We use MemoryRouter here because Header does not include its own Router.
+// Avoid wrapping RootRouter in another Router to prevent nested <Router> errors.
+
 // Mock supabase to control auth state similar to other tests
 jest.mock('./supabaseClient', () => {
   let session = null;

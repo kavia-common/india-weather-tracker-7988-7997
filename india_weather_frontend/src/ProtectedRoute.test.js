@@ -2,6 +2,9 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
+// NOTE: Tests here intentionally provide routing context with MemoryRouter,
+// because ProtectedRoute is a component (not the RootRouter) and needs a single router.
+
 // Mock supabase client to simulate unauthenticated and authenticated states.
 jest.mock('./supabaseClient', () => {
   let session = null;
