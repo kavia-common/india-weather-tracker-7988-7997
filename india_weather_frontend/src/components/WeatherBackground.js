@@ -128,51 +128,80 @@ export function pickBackgroundTheme(code, text) {
     else kind = 'clear';
   }
 
-  // Use modern gradients; optionally overlay subtle texture images from /assets if later added.
+  // Use modern gradients with royalty-free imagery from /public/assets/backgrounds.
+  // We apply a semi-transparent dark overlay via backgroundBlendMode to ensure text readability.
+  // Note: public assets are served from root as /assets/...
   switch (kind) {
     case 'cloudy':
       return {
-        gradStart: 'rgba(148,163,184,0.18)', // slate-400/20
-        gradEnd: 'rgba(241,245,249,1)', // slate-100
-        image: '', // can be updated to use assets if provided
+        gradStart: 'rgba(17,24,39,0.40)', // dark overlay for contrast
+        gradEnd: 'rgba(17,24,39,0.15)',
+        image: 'url("/assets/backgrounds/cloudy.jpg")',
+        imageSize: 'cover, auto',
+        imagePosition: 'center, center',
+        imageAttachment: 'fixed, scroll',
+        imageBlendMode: 'multiply, normal',
       };
     case 'fog':
       return {
-        gradStart: 'rgba(203,213,225,0.25)', // slate-300/25
-        gradEnd: 'rgba(248,250,252,1)', // slate-50
-        image: '',
+        gradStart: 'rgba(17,24,39,0.35)',
+        gradEnd: 'rgba(17,24,39,0.15)',
+        image: 'url("/assets/backgrounds/fog.jpg")',
+        imageSize: 'cover, auto',
+        imagePosition: 'center, center',
+        imageAttachment: 'fixed, scroll',
+        imageBlendMode: 'multiply, normal',
       };
     case 'drizzle':
       return {
-        gradStart: 'rgba(59,130,246,0.10)', // blue-500/10
-        gradEnd: 'rgba(229,231,235,1)', // gray-200
-        image: '',
+        gradStart: 'rgba(37,99,235,0.35)', // blue tint for drizzle
+        gradEnd: 'rgba(17,24,39,0.15)',
+        image: 'url("/assets/backgrounds/rain.jpg")',
+        imageSize: 'cover, auto',
+        imagePosition: 'center, center',
+        imageAttachment: 'fixed, scroll',
+        imageBlendMode: 'overlay, normal',
       };
     case 'rain':
       return {
-        gradStart: 'rgba(37,99,235,0.22)', // blue-600/22
-        gradEnd: 'rgba(15,23,42,0.06)', // slate-900/6
-        image: '',
+        gradStart: 'rgba(30,58,138,0.55)', // darker blue overlay
+        gradEnd: 'rgba(2,6,23,0.35)',
+        image: 'url("/assets/backgrounds/rain.jpg")',
+        imageSize: 'cover, auto',
+        imagePosition: 'center, center',
+        imageAttachment: 'fixed, scroll',
+        imageBlendMode: 'multiply, normal',
       };
     case 'snow':
       return {
-        gradStart: 'rgba(186,230,253,0.25)', // sky-200/25
-        gradEnd: 'rgba(255,255,255,1)',
-        image: '',
+        gradStart: 'rgba(15,23,42,0.30)',
+        gradEnd: 'rgba(248,250,252,0.30)',
+        image: 'url("/assets/backgrounds/snow.jpg")',
+        imageSize: 'cover, auto',
+        imagePosition: 'center, center',
+        imageAttachment: 'fixed, scroll',
+        imageBlendMode: 'multiply, normal',
       };
     case 'thunder':
       return {
-        gradStart: 'rgba(15,23,42,0.55)', // slate-900/55
-        gradEnd: 'rgba(30,41,59,0.85)', // slate-800/85
-        image: '',
-        imageBlendMode: 'overlay',
+        gradStart: 'rgba(2,6,23,0.65)',
+        gradEnd: 'rgba(30,27,75,0.55)',
+        image: 'url("/assets/backgrounds/thunder.jpg")',
+        imageSize: 'cover, auto',
+        imagePosition: 'center, center',
+        imageAttachment: 'fixed, scroll',
+        imageBlendMode: 'overlay, normal',
       };
     case 'clear':
     default:
       return {
-        gradStart: 'rgba(59,130,246,0.14)', // blue-500/14
-        gradEnd: 'rgba(249,250,251,1)', // gray-50
-        image: '',
+        gradStart: 'rgba(29,78,216,0.30)', // blue overlay
+        gradEnd: 'rgba(59,130,246,0.18)',
+        image: 'url("/assets/backgrounds/sunny.jpg")',
+        imageSize: 'cover, auto',
+        imagePosition: 'center, center',
+        imageAttachment: 'fixed, scroll',
+        imageBlendMode: 'multiply, normal',
       };
   }
 }
