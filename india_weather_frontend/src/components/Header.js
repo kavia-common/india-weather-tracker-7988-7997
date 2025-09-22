@@ -18,15 +18,22 @@ export default function Header() {
 
     async function getSession() {
       if (!supabase) return;
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (mounted) setUser(session?.user ?? null);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (mounted) setUser(session?.user ?? null);
+      } catch (e) {
+        // If session fetch fails, treat as logged out
+        if (mounted) setUser(null);
+        console.warn('[Header] getSession error:', e);
+      }
     }
     getSession();
 
     if (supabase) {
       const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+        // Keep local user in sync with Supabase auth state
         setUser(session?.user ?? null);
       });
       return () => {
@@ -37,9 +44,23 @@ export default function Header() {
   }, [supabase]);
 
   const handleLogout = async () => {
-    if (!supabase) return;
-    await supabase.auth.signOut();
-    navigate('/');
+    if (!supabase) {
+      navigate('/login', { replace: true });
+      return;
+    }
+    try {
+      // Attempt sign out; immediately clear local user state for responsive UI
+      setUser(null);
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.warn('[Header] signOut error:', error);
+      }
+    } catch (e) {
+      console.warn('[Header] signOut exception:', e);
+    } finally {
+      // Redirect to login to ensure restricted routes are gated
+      navigate('/login', { replace: true });
+    }
   };
 
   return (
@@ -64,16 +85,19 @@ export default function Header() {
           >
             Home
           </NavLink>
-          <NavLink
-            to="/search"
-            style={({ isActive }) => ({
-              fontWeight: 700,
-              color: isActive ? 'var(--primary)' : 'inherit',
-              textDecoration: 'none',
-            })}
-          >
-            Search
-          </NavLink>
+          {/* Only show Search when authenticated to clearly hide restricted feature on logout */}
+          {user && (
+            <NavLink
+              to="/search"
+              style={({ isActive }) => ({
+                fontWeight: 700,
+                color: isActive ? 'var(--primary)' : 'inherit',
+                textDecoration: 'none',
+              })}
+            >
+              Search
+            </NavLink>
+          )}
         </nav>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -87,7 +111,12 @@ export default function Header() {
               >
                 {user.email}
               </span>
-              <button className="btn btn-ghost" onClick={handleLogout} title="Logout">
+              <button
+                className="btn btn-ghost"
+                onClick={handleLogout}
+                title="Logout"
+                aria-label="Logout"
+              >
                 Logout
               </button>
             </>
