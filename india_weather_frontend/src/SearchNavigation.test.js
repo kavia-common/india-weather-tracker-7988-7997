@@ -83,4 +83,4 @@ describe('Navigation to /search after auth', () => {
       expect(screen.getByRole('button', { name: /Search/i })).toBeInTheDocument();
     });
   });
-}
+});

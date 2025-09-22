@@ -27,6 +27,8 @@ jest.mock('./supabaseClient', () => {
         listeners.forEach((l) => l('TOKEN_REFRESHED', s));
       },
       signOut: async () => {
+        // simulate async server call
+        await new Promise((r) => setTimeout(r, 10));
         session = null;
         listeners.forEach((l) => l('SIGNED_OUT', null));
         return { error: null };
@@ -70,7 +72,7 @@ describe('Header logout behavior', () => {
     expect(screen.getByText(/Sign Up/i)).toBeInTheDocument();
   });
 
-  test('logout clears header user state, hides Search, and redirects to login', async () => {
+  test('logout clears header user state immediately, hides Search, removes logout button, and redirects to login', async () => {
     const { __mockAuth } = require('./supabaseClient');
 
     render(
@@ -96,13 +98,16 @@ describe('Header logout behavior', () => {
     const logoutBtn = await screen.findByRole('button', { name: /logout/i });
     await userEvent.click(logoutBtn);
 
-    // After logout, redirected to login and header shows Login/Sign Up; Search should be hidden
+    // Immediately after click, user email and logout button should no longer be present
+    expect(screen.queryByText('user@example.com')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /logout/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Search/i)).not.toBeInTheDocument();
+
+    // After navigation, ensure we are on login page and login/signup are visible
     await waitFor(() => {
       expect(screen.getByText(/Login Page/i)).toBeInTheDocument();
       expect(screen.getByText(/Login/i)).toBeInTheDocument();
       expect(screen.getByText(/Sign Up/i)).toBeInTheDocument();
-      expect(screen.queryByText('user@example.com')).not.toBeInTheDocument();
-      expect(screen.queryByText(/Search/i)).not.toBeInTheDocument();
     });
   });
 });

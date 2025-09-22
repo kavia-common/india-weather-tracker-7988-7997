@@ -22,11 +22,19 @@ export default function Header() {
   const [toast, setToast] = useState(null); // simple ephemeral toast state
   const navigate = useNavigate();
   const mountedRef = useRef(true);
+  const unsubscribeRef = useRef(null); // keep unsubscribe to cleanly detach on unmount
+  const logoutInProgressRef = useRef(false); // prevent races
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      try {
+        // Ensure we unsubscribe from auth state changes to avoid delayed re-renders after logout
+        unsubscribeRef.current?.();
+      } catch {
+        // ignore
+      }
     };
   }, []);
 
@@ -73,13 +81,30 @@ export default function Header() {
     getSession();
 
     if (supabase) {
-      const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
+      const { data } = supabase.auth.onAuthStateChange((event, session) => {
         console.debug('[Header] onAuthStateChange:', event, 'user?', !!session?.user);
+        if (!mountedRef.current) return;
+
+        // When logging out, we force-clear UI state immediately and ignore any late auth events
+        if (logoutInProgressRef.current) {
+          return;
+        }
         // Keep local user in sync with Supabase auth state
         setUser(session?.user ?? null);
       });
+
+      // Supabase v2 returns { data: { subscription } }
+      const unsub =
+        data?.subscription?.unsubscribe?.bind(data.subscription) ||
+        (() => {});
+      unsubscribeRef.current = unsub;
+
       return () => {
-        subscription?.subscription?.unsubscribe?.();
+        try {
+          unsub();
+        } catch {
+          // ignore
+        }
         mounted = false;
       };
     }
@@ -87,20 +112,39 @@ export default function Header() {
 
   // PUBLIC_INTERFACE
   const handleLogout = async () => {
+    // Guard against double clicks
+    if (logoutInProgressRef.current) return;
+    logoutInProgressRef.current = true;
+
     const tStart = performance.now();
     const navToLogin = () => {
       // Ensure we redirect immediately for a snappy UX
       navigate('/login', { replace: true });
     };
 
-    if (!supabase) {
-      console.debug('[Header] No Supabase client; fast-redirecting to login.');
-      navToLogin();
-      return;
+    // Clear UI state right away for instantaneous feedback and hide user info
+    setUser(null);
+
+    // Detach auth state listener immediately to avoid re-setting user from any late events
+    try {
+      unsubscribeRef.current?.();
+      unsubscribeRef.current = null;
+    } catch {
+      // ignore
     }
 
-    // Clear UI state right away for instantaneous feedback
-    setUser(null);
+    const finish = () => {
+      const total = performance.now() - tStart;
+      console.debug('[Header] Logout initiated; total time to trigger navigation(ms):', Math.round(total));
+      navToLogin();
+    };
+
+    if (!supabase) {
+      console.debug('[Header] No Supabase client; fast-redirecting to login.');
+      finish();
+      logoutInProgressRef.current = false;
+      return;
+    }
 
     if (logoutStrategy === 'awaitBeforeNav') {
       // Strategy 1: await signOut then navigate (baseline for profiling)
@@ -118,9 +162,8 @@ export default function Header() {
         console.warn('[Header] signOut exception:', e);
         showToast('Logout completed locally; sign-out encountered a network error.');
       } finally {
-        const total = performance.now() - tStart;
-        console.debug('[Header] Total logout flow duration(ms) including navigation:', Math.round(total));
-        navToLogin();
+        finish();
+        logoutInProgressRef.current = false;
       }
       return;
     }
@@ -128,8 +171,7 @@ export default function Header() {
     // Strategy 2 (default): navigate first, perform signOut in background (never block)
     try {
       console.debug('[Header][Strategy=fireAndNavigate] Navigating immediately, signOut in background...');
-      // Navigate right away
-      navToLogin();
+      finish();
 
       // Kick off signOut in the background; we do not await before navigation.
       // Add a hard timeout guard so we can profile "hung" calls.
@@ -155,10 +197,8 @@ export default function Header() {
     } catch (e) {
       console.warn('[Header] Background signOut exception:', e);
       showToast('Signed out. Background cleanup hit an error.');
-      // Navigation already initiated
     } finally {
-      const total = performance.now() - tStart;
-      console.debug('[Header] Logout initiated; total time to trigger navigation(ms):', Math.round(total));
+      logoutInProgressRef.current = false;
     }
   };
 
@@ -206,6 +246,7 @@ export default function Header() {
               <span
                 className="location-pill"
                 title={user.email || 'Authenticated user'}
+                data-testid="user-email-pill"
                 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 220 }}
               >
                 {user.email}
