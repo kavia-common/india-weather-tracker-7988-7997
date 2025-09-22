@@ -1,35 +1,48 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Module-scoped singleton reference.
+// In browser tests with JSDOM and React Fast Refresh, modules can re-evaluate,
+// so we keep the instance at module scope and lazily initialize exactly once.
+let supabaseSingleton = null;
+
 /**
  * PUBLIC_INTERFACE
  * getSupabaseClient
- * Returns a Supabase client configured from environment variables.
- * Ensure the following variables are provided in the environment:
+ * Returns a module-scoped singleton Supabase client configured from environment variables.
+ * Ensures only a single GoTrueClient is created to suppress duplicate warnings in tests and runtime.
+ * Environment variables required:
  * - REACT_APP_SUPABASE_URL
  * - REACT_APP_SUPABASE_KEY
  */
 export function getSupabaseClient() {
+  // If already initialized, return the same instance
+  if (supabaseSingleton) return supabaseSingleton;
+
   const url = process.env.REACT_APP_SUPABASE_URL;
   const key = process.env.REACT_APP_SUPABASE_KEY;
 
   if (!url || !key) {
-    // We don't throw to avoid breaking the UI; log an explicit warning.
-    // The UI will still function for public weather fetching that doesn't require Supabase.
-    // To enable Supabase features, supply these env vars.
-    // Note for operators: set them in the container's .env.
-    console.warn(
-      'Supabase env vars missing. Please set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_KEY.'
-    );
-    return null;
+    // Do not throw: app can run without Supabase for public features.
+    // Keep warning minimal to avoid noisy test output.
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn(
+        '[Supabase] Missing env vars REACT_APP_SUPABASE_URL/REACT_APP_SUPABASE_KEY; auth features disabled.'
+      );
+    }
+    supabaseSingleton = null;
+    return supabaseSingleton;
   }
 
-  const client = createClient(url, key);
+  // Lazily create the client once
+  supabaseSingleton = createClient(url, key);
   try {
-    console.debug('[SupabaseClient] Created client with provided env vars.');
+    if (typeof console !== 'undefined' && console.debug) {
+      console.debug('[SupabaseClient] Initialized singleton client.');
+    }
   } catch {
-    // ignore
+    // ignore console failures
   }
-  return client;
+  return supabaseSingleton;
 }
 
 /**
@@ -57,3 +70,8 @@ export async function logEvent(type, payload = {}) {
     console.warn('Supabase logEvent exception:', e);
   }
 }
+
+// Optional: expose a testing-only reset to avoid cross-test pollution.
+// Not exported in builds; Jest can mock this module anyway.
+// Uncomment if needed in specialized test environments.
+// export function __resetSupabaseSingleton() { supabaseSingleton = null; }
