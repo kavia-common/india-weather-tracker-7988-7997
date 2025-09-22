@@ -46,6 +46,7 @@ jest.mock('./supabaseClient', () => {
 });
 
 import Header from './components/Header';
+import { AuthProvider } from './context/AuthContext';
 
 function Home() {
   return <div>Home Page</div>;
@@ -61,18 +62,21 @@ describe('Header logout behavior', () => {
   test('shows login/signup when unauthenticated and hides Search', async () => {
     render(
       <MemoryRouter initialEntries={['/']}>
-        <Routes>
-          <Route path="/" element={<><Header /><Home /></>} />
-          <Route path="/login" element={<LoginPage />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<><Header /><Home /></>} />
+            <Route path="/login" element={<LoginPage />} />
+          </Routes>
+        </AuthProvider>
       </MemoryRouter>
     );
 
-    // Search nav should not be visible when logged out
-    expect(screen.queryByText(/Search/i)).not.toBeInTheDocument();
-    // Login/Sign Up should be present
-    expect(screen.getByText(/Login/i)).toBeInTheDocument();
-    expect(screen.getByText(/Sign Up/i)).toBeInTheDocument();
+    // Wait for auth context to settle unauthenticated state
+    await waitFor(() => {
+      expect(screen.queryByText(/Search/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/Login/i)).toBeInTheDocument();
+      expect(screen.getByText(/Sign Up/i)).toBeInTheDocument();
+    });
   });
 
   test('logout clears header user state immediately, hides Search, removes logout button, and redirects to login', async () => {
@@ -80,18 +84,20 @@ describe('Header logout behavior', () => {
 
     render(
       <MemoryRouter initialEntries={['/']}>
-        <Routes>
-          <Route path="/" element={<><Header /><Home /></>} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/search" element={<SearchPage />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<><Header /><Home /></>} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/search" element={<SearchPage />} />
+          </Routes>
+        </AuthProvider>
       </MemoryRouter>
     );
 
-    // Simulate login/session
+    // Simulate login/session (notify listeners)
     __mockAuth.__setSession({ user: { id: 'u1', email: 'user@example.com' } });
 
-    // Expect user email and Search nav appear
+    // Expect user email and Search nav appear when context updates
     await waitFor(() => {
       expect(screen.getByText('user@example.com')).toBeInTheDocument();
       expect(screen.getByText(/Search/i)).toBeInTheDocument();
@@ -120,10 +126,12 @@ describe('Header logout behavior', () => {
     // Render header on a route and log in
     render(
       <MemoryRouter initialEntries={['/']}>
-        <Routes>
-          <Route path="/" element={<><Header /><Home /></>} />
-          <Route path="/login" element={<LoginPage />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<><Header /><Home /></>} />
+            <Route path="/login" element={<LoginPage />} />
+          </Routes>
+        </AuthProvider>
       </MemoryRouter>
     );
 

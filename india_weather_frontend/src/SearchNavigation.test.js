@@ -48,6 +48,7 @@ jest.mock('./supabaseClient', () => {
 
 import ProtectedRoute from './components/ProtectedRoute';
 import SearchWeather from './pages/SearchWeather';
+import { AuthProvider } from './context/AuthContext';
 
 function LoginPage() {
   return <div>Login Page</div>;
@@ -59,17 +60,19 @@ describe('Navigation to /search after auth', () => {
 
     render(
       <MemoryRouter initialEntries={['/search']}>
-        <Routes>
-          <Route
-            path="/search"
-            element={
-              <ProtectedRoute>
-                <SearchWeather />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/login" element={<LoginPage />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/search"
+              element={
+                <ProtectedRoute>
+                  <SearchWeather />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/login" element={<LoginPage />} />
+          </Routes>
+        </AuthProvider>
       </MemoryRouter>
     );
 

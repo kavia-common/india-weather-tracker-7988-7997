@@ -41,6 +41,7 @@ jest.mock('./supabaseClient', () => {
 });
 
 import ProtectedRoute from './components/ProtectedRoute';
+import { AuthProvider } from './context/AuthContext';
 
 function ProtectedPage() {
   return <div>Protected Content</div>;
@@ -54,17 +55,19 @@ describe('ProtectedRoute', () => {
   test('redirects unauthenticated users to login with redirect param', async () => {
     render(
       <MemoryRouter initialEntries={['/search']}>
-        <Routes>
-          <Route
-            path="/search"
-            element={
-              <ProtectedRoute>
-                <ProtectedPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/login" element={<LoginPage />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/search"
+              element={
+                <ProtectedRoute>
+                  <ProtectedPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/login" element={<LoginPage />} />
+          </Routes>
+        </AuthProvider>
       </MemoryRouter>
     );
 
@@ -82,17 +85,19 @@ describe('ProtectedRoute', () => {
 
     render(
       <MemoryRouter initialEntries={['/search']}>
-        <Routes>
-          <Route
-            path="/search"
-            element={
-              <ProtectedRoute>
-                <ProtectedPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/login" element={<LoginPage />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/search"
+              element={
+                <ProtectedRoute>
+                  <ProtectedPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/login" element={<LoginPage />} />
+          </Routes>
+        </AuthProvider>
       </MemoryRouter>
     );
 
