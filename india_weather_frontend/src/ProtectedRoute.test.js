@@ -72,12 +72,10 @@ describe('ProtectedRoute', () => {
     );
 
     // Should show checking first
-    expect(screen.getByText(/Checking authentication/i)).toBeInTheDocument();
+    await screen.findByText(/Checking authentication/i);
 
     // After auth check completes, we should be on Login Page
-    await waitFor(() => {
-      expect(screen.getByText(/Login Page/i)).toBeInTheDocument();
-    });
+    await screen.findByText(/Login Page/i);
   });
 
   test('renders children when authenticated', async () => {
@@ -102,14 +100,12 @@ describe('ProtectedRoute', () => {
     );
 
     // Initially shows checking
-    expect(screen.getByText(/Checking authentication/i)).toBeInTheDocument();
+    await screen.findByText(/Checking authentication/i);
 
     // Simulate a session
     __mockAuth.__setSession({ user: { id: '123', email: 'test@example.com' } });
 
     // Expect protected content to render
-    await waitFor(() => {
-      expect(screen.getByText(/Protected Content/i)).toBeInTheDocument();
-    });
+    await screen.findByText(/Protected Content/i);
   });
 });

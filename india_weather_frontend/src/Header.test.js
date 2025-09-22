@@ -71,11 +71,12 @@ describe('Header logout behavior', () => {
       </MemoryRouter>
     );
 
-    // Wait for auth context to settle unauthenticated state
+    // Wait for unauthenticated state to render
+    await screen.findByText(/Login/i);
+    await screen.findByText(/Sign Up/i);
+
     await waitFor(() => {
       expect(screen.queryByText(/Search/i)).not.toBeInTheDocument();
-      expect(screen.getByText(/Login/i)).toBeInTheDocument();
-      expect(screen.getByText(/Sign Up/i)).toBeInTheDocument();
     });
   });
 
@@ -98,26 +99,24 @@ describe('Header logout behavior', () => {
     __mockAuth.__setSession({ user: { id: 'u1', email: 'user@example.com' } });
 
     // Expect user email and Search nav appear when context updates
-    await waitFor(() => {
-      expect(screen.getByText('user@example.com')).toBeInTheDocument();
-      expect(screen.getByText(/Search/i)).toBeInTheDocument();
-    });
+    await screen.findByText('user@example.com');
+    await screen.findByText(/Search/i);
 
     // Click Logout
     const logoutBtn = await screen.findByRole('button', { name: /logout/i });
     await userEvent.click(logoutBtn);
 
-    // Immediately after click, user email and logout button should no longer be present
-    expect(screen.queryByText('user@example.com')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /logout/i })).not.toBeInTheDocument();
-    expect(screen.queryByText(/Search/i)).not.toBeInTheDocument();
+    // Wait for user elements to disappear after state change
+    await waitFor(() => {
+      expect(screen.queryByText('user@example.com')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /logout/i })).not.toBeInTheDocument();
+      expect(screen.queryByText(/Search/i)).not.toBeInTheDocument();
+    });
 
     // After navigation, ensure we are on login page and login/signup are visible
-    await waitFor(() => {
-      expect(screen.getByText(/Login Page/i)).toBeInTheDocument();
-      expect(screen.getByText(/Login/i)).toBeInTheDocument();
-      expect(screen.getByText(/Sign Up/i)).toBeInTheDocument();
-    });
+    await screen.findByText(/Login Page/i);
+    await screen.findByText(/Login/i);
+    await screen.findByText(/Sign Up/i);
   });
 
   test('logout does not throw when context ref is missing or malformed', async () => {
@@ -137,9 +136,7 @@ describe('Header logout behavior', () => {
 
     __mockAuth.__setSession({ user: { id: 'u2', email: 'refcheck@example.com' } });
 
-    await waitFor(() => {
-      expect(screen.getByText('refcheck@example.com')).toBeInTheDocument();
-    });
+    await screen.findByText('refcheck@example.com');
 
     const logoutBtn = await screen.findByRole('button', { name: /logout/i });
 
@@ -149,9 +146,7 @@ describe('Header logout behavior', () => {
     await userEvent.click(logoutBtn);
 
     // Should navigate to login and no error thrown
-    await waitFor(() => {
-      expect(screen.getByText(/Login Page/i)).toBeInTheDocument();
-    });
+    await screen.findByText(/Login Page/i/);
 
     expect(errorSpy).not.toHaveBeenCalled();
     errorSpy.mockRestore();
