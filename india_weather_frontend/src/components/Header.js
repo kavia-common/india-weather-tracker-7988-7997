@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { getSupabaseClient } from '../supabaseClient';
 import { useAuth } from '../context/AuthContext';
@@ -23,11 +23,31 @@ export default function Header() {
   const navigate = useNavigate();
   const mountedRef = useRef(true);
 
+  // keep a local fallback ref in case context ref is unavailable/mis-shaped
+  const localLogoutRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      // ensure we don't update toast after unmount
+      mountedRef.current = false;
+    };
+  }, []);
+
   // Helper: get current strategy from localStorage (kept to allow profiling)
   const logoutStrategy = useMemo(() => {
-    const value = (typeof window !== 'undefined' && window.localStorage.getItem('logoutStrategy')) || 'fireAndNavigate';
+    const value =
+      (typeof window !== 'undefined' && window.localStorage.getItem('logoutStrategy')) ||
+      'fireAndNavigate';
     return value === 'awaitBeforeNav' ? 'awaitBeforeNav' : 'fireAndNavigate';
   }, []);
+
+  const isValidRef = (refObj) =>
+    refObj && typeof refObj === 'object' && Object.prototype.hasOwnProperty.call(refObj, 'current');
+
+  const getLogoutRef = () => {
+    // Prefer the context ref if it's a proper ref, else use local fallback
+    return isValidRef(__logoutInProgressRef) ? __logoutInProgressRef : localLogoutRef;
+  };
 
   const showToast = (message) => {
     try {
@@ -44,10 +64,13 @@ export default function Header() {
 
   // PUBLIC_INTERFACE
   const handleLogout = async () => {
-    if (__logoutInProgressRef.current?.current) {
+    const flagRef = getLogoutRef();
+
+    if (flagRef.current) {
+      // already in progress
       return;
     }
-    __logoutInProgressRef.current.current = true;
+    flagRef.current = true;
 
     // Clear UI immediately and navigate after state clears
     setUser(null);
@@ -55,7 +78,7 @@ export default function Header() {
 
     if (!supabase) {
       goLogin();
-      __logoutInProgressRef.current.current = false;
+      flagRef.current = false;
       return;
     }
 
@@ -67,7 +90,7 @@ export default function Header() {
         showToast('Logout completed locally; sign-out encountered a network error.');
       } finally {
         goLogin();
-        __logoutInProgressRef.current.current = false;
+        flagRef.current = false;
       }
       return;
     }
@@ -83,11 +106,11 @@ export default function Header() {
         } catch {
           showToast('Signed out. Background cleanup hit an error.');
         } finally {
-          __logoutInProgressRef.current.current = false;
+          flagRef.current = false;
         }
       })();
     } catch {
-      __logoutInProgressRef.current.current = false;
+      flagRef.current = false;
     }
   };
 

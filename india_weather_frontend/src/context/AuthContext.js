@@ -10,6 +10,8 @@ const AuthContext = createContext({
   user: null,
   setUser: () => {},
   authLoading: true,
+  // Provide a safe default ref-like object to prevent consumers from crashing
+  __logoutInProgressRef: { current: false },
 });
 
 /**

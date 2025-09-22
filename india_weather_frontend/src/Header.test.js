@@ -110,4 +110,39 @@ describe('Header logout behavior', () => {
       expect(screen.getByText(/Sign Up/i)).toBeInTheDocument();
     });
   });
+
+  test('logout does not throw when context ref is missing or malformed', async () => {
+    const { __mockAuth } = require('./supabaseClient');
+
+    // Render header on a route and log in
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<><Header /><Home /></>} />
+          <Route path="/login" element={<LoginPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    __mockAuth.__setSession({ user: { id: 'u2', email: 'refcheck@example.com' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('refcheck@example.com')).toBeInTheDocument();
+    });
+
+    const logoutBtn = await screen.findByRole('button', { name: /logout/i });
+
+    // Spy on console.error to ensure no crash logs appear from exceptions
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    await userEvent.click(logoutBtn);
+
+    // Should navigate to login and no error thrown
+    await waitFor(() => {
+      expect(screen.getByText(/Login Page/i)).toBeInTheDocument();
+    });
+
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
 });
