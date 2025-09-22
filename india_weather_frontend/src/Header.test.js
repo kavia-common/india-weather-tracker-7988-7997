@@ -146,7 +146,7 @@ describe('Header logout behavior', () => {
     await userEvent.click(logoutBtn);
 
     // Should navigate to login and no error thrown
-    await screen.findByText(/Login Page/i/);
+    await screen.findByText(/Login Page/i);
 
     expect(errorSpy).not.toHaveBeenCalled();
     errorSpy.mockRestore();
