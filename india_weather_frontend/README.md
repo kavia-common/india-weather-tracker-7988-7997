@@ -11,6 +11,7 @@ A modern React web app that detects the user's current location in India and dis
 - Login/Signup via Supabase Auth (email/password)
 - Auth state in header with user email and logout
 - Minimalist modern UI with rounded cards, shadows, gradients, and subtle transitions
+- Dynamic app background that adapts to current weather (clear, cloudy, rain, snow, fog, thunder)
 - Refresh button
 - Supabase integration via environment variables (optional logging, required for auth)
 
@@ -64,6 +65,8 @@ IMPORTANT: Supabase Configuration Required (Dashboard)
 - Reverse geocoding: https://nominatim.openstreetmap.org/
 
 ## Notes
+
+- Dynamic background mapping lives in src/components/WeatherBackground.js (see pickBackgroundTheme). You can update gradient colors or add image overlays (hosted in /public/assets) for each weather group.
 
 - Users must allow location access in the browser for automatic detection.
 - The search feature is only available to authenticated users.

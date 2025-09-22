@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { fetchWeatherByCoords, weatherCodeToText } from '../services/weatherService';
+import WeatherBackground from '../components/WeatherBackground';
 
 /**
  * PUBLIC_INTERFACE
@@ -83,8 +84,13 @@ export default function SearchWeather() {
   const condition = weather ? weatherCodeToText(weather.weathercode) : '—';
 
   return (
-    <main className="container">
-      <section className="hero" aria-live="polite">
+    <WeatherBackground
+      scope="document"
+      weatherCode={weather?.weathercode}
+      conditionText={condition}
+    >
+      <main className="container">
+        <section className="hero" aria-live="polite">
         <div className="hero-top">
           <div className="location">
             <span className="kicker">Search India</span>
@@ -189,6 +195,7 @@ export default function SearchWeather() {
       <p className="footer-note" style={{ marginTop: 10 }}>
         Data by Open‑Meteo • Geocoding by OpenStreetMap Nominatim
       </p>
-    </main>
+      </main>
+    </WeatherBackground>
   );
 }

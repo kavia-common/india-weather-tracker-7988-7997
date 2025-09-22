@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import './App.css';
 import { fetchWeatherByCoords, resolveLocationName, weatherCodeToText } from './services/weatherService';
 import { logEvent } from './supabaseClient';
+import WeatherBackground from './components/WeatherBackground';
 
 /**
  * PUBLIC_INTERFACE
@@ -121,6 +122,11 @@ function App() {
   const condition = weather ? weatherCodeToText(weather.weathercode) : '—';
 
   return (
+    <WeatherBackground
+      scope="document"
+      weatherCode={weather?.weathercode}
+      conditionText={condition}
+    >
     <main className="container">
       <section className="hero" aria-live="polite">
         <div className="hero-top">
@@ -199,6 +205,7 @@ function App() {
         Data by Open‑Meteo • Reverse geocoding by OpenStreetMap Nominatim
       </p>
     </main>
+    </WeatherBackground>
   );
 }
 
