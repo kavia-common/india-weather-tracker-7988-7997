@@ -1,14 +1,14 @@
 import { render, screen } from '@testing-library/react';
-import App from './App';
+import RootRouter from './RootRouter';
 
 test('renders header brand', () => {
-  render(<App />);
+  render(<RootRouter />);
   const brandTitle = screen.getByText(/India Weather/i);
   expect(brandTitle).toBeInTheDocument();
 });
 
-test('renders refresh button', () => {
-  render(<App />);
+test('renders refresh button on home', () => {
+  render(<RootRouter />);
   const button = screen.getByRole('button', { name: /refresh/i });
   expect(button).toBeInTheDocument();
 });

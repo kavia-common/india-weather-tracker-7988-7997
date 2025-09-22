@@ -1,15 +1,18 @@
 # India Weather Frontend
 
-A modern React web app that detects the user's current location in India and displays real-time weather using an Ocean Professional theme with blue and amber accents. Includes optional Supabase integration for basic event logging.
+A modern React web app that detects the user's current location in India and displays real-time weather using an Ocean Professional theme with blue and amber accents. Includes Supabase integration for authentication (login/signup) and optional event logging.
 
 ## Features
 
 - Automatic location detection (browser geolocation)
 - Real-time weather fetch (Open-Meteo)
 - Reverse geocoding for location names (OpenStreetMap Nominatim)
+- Search weather for any Indian location (city/town/pin) — requires login
+- Login/Signup via Supabase Auth (email/password)
+- Auth state in header with user email and logout
 - Minimalist modern UI with rounded cards, shadows, gradients, and subtle transitions
 - Refresh button
-- Supabase integration via environment variables (optional)
+- Supabase integration via environment variables (optional logging, required for auth)
 
 ## Getting Started
 
@@ -29,9 +32,17 @@ Set these in a .env file at the project root (or via your deployment environment
 
 - REACT_APP_SUPABASE_URL=your_supabase_project_url
 - REACT_APP_SUPABASE_KEY=your_supabase_anon_key
-- (optional) REACT_APP_SITE_URL=your_site_base_url (used for auth redirects if you later enable auth)
+- (optional) REACT_APP_SITE_URL=your_site_base_url (used for auth redirects; defaults to http://localhost:3000)
 
-If not provided, the app still runs; Supabase-based logging will be disabled.
+If not provided, the app still runs for public weather features; Supabase-based auth/logging will be disabled.
+
+## App Routes
+
+- / — Home (auto-detected location weather)
+- /search — Search weather for other Indian locations (Protected; requires login)
+- /login — Login page
+- /signup — Signup page
+- /auth/callback — Supabase auth callback route
 
 ## Supabase Setup
 
@@ -55,4 +66,5 @@ IMPORTANT: Supabase Configuration Required (Dashboard)
 ## Notes
 
 - Users must allow location access in the browser for automatic detection.
+- The search feature is only available to authenticated users.
 - The UI is optimized for a modern, professional look with Ocean Professional styling as specified.

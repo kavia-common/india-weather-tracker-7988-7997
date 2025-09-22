@@ -6,7 +6,7 @@ import { logEvent } from './supabaseClient';
 /**
  * PUBLIC_INTERFACE
  * App
- * Main application component for the India Weather frontend.
+ * Home page component for the India Weather frontend.
  * - Detects user location via Geolocation API
  * - Fetches real-time weather for detected coordinates
  * - Displays metrics in card-style UI with Ocean Professional theme
@@ -41,8 +41,6 @@ function App() {
   }, [weather]);
 
   useEffect(() => {
-    // First attempt to query permission (where supported)
-    // to provide a better UX message.
     async function checkPerm() {
       try {
         if (navigator.permissions && navigator.permissions.query) {
@@ -51,14 +49,13 @@ function App() {
           res.onchange = () => setPermission(res.state);
         }
       } catch {
-        // ignore, not supported
+        // ignore
       }
     }
     checkPerm();
   }, []);
 
   useEffect(() => {
-    // On first load, request location and fetch weather
     handleRefresh(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -69,10 +66,11 @@ function App() {
     }
     return new Promise((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({
-          lat: pos.coords.latitude,
-          lon: pos.coords.longitude,
-        }),
+        (pos) =>
+          resolve({
+            lat: pos.coords.latitude,
+            lon: pos.coords.longitude,
+          }),
         (err) => reject(err),
         { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
       );
@@ -123,101 +121,84 @@ function App() {
   const condition = weather ? weatherCodeToText(weather.weathercode) : '—';
 
   return (
-    <div className="app">
-      <header className="header">
-        <div className="header-inner">
-          <div className="brand">
-            <div className="brand-badge">IW</div>
-            <div>
-              <div className="brand-title">India Weather</div>
-              <div className="brand-sub">Ocean Professional</div>
-            </div>
-          </div>
-          <div style={{ marginLeft: 'auto' }}>
-            <span className="badge">Real-time</span>
-          </div>
-        </div>
-      </header>
-
-      <main className="container">
-        <section className="hero" aria-live="polite">
-          <div className="hero-top">
-            <div className="location">
-              <span className="kicker">Your location</span>
-              <div className="location-line">
-                <span role="img" aria-label="location">📍</span>
-                <span>{locationName || (permission === 'denied' ? 'Permission denied' : 'Detecting...')}</span>
-                {coords && (
-                  <span className="location-pill" title="Coordinates">
-                    {coords.lat.toFixed(2)}°, {coords.lon.toFixed(2)}°
-                  </span>
-                )}
-              </div>
-              <div className="status">{status}{timeLabel ? ` • ${timeLabel} (local)` : ''}</div>
-            </div>
-
-            <div className="actions">
-              <button
-                className="btn btn-ghost"
-                onClick={() => handleRefresh(false)}
-                disabled={loading}
-                aria-busy={loading ? 'true' : 'false'}
-                aria-label="Refresh weather"
-                title="Refresh"
-              >
-                {loading ? 'Refreshing...' : 'Refresh'}
-              </button>
-              {!coords && permission === 'denied' && (
-                <button
-                  className="btn btn-primary"
-                  onClick={() => handleRefresh(false)}
-                >
-                  Retry Location
-                </button>
+    <main className="container">
+      <section className="hero" aria-live="polite">
+        <div className="hero-top">
+          <div className="location">
+            <span className="kicker">Your location</span>
+            <div className="location-line">
+              <span role="img" aria-label="location">📍</span>
+              <span>{locationName || (permission === 'denied' ? 'Permission denied' : 'Detecting...')}</span>
+              {coords && (
+                <span className="location-pill" title="Coordinates">
+                  {coords.lat.toFixed(2)}°, {coords.lon.toFixed(2)}°
+                </span>
               )}
             </div>
+            <div className="status">{status}{timeLabel ? ` • ${timeLabel} (local)` : ''}</div>
           </div>
 
-          {error && (
-            <div className="card" role="alert" style={{ borderColor: 'rgba(239,68,68,0.35)' }}>
-              <div className="card-title" style={{ color: 'var(--error)' }}>
-                ⚠️ Error
-              </div>
-              <div className="card-value" style={{ fontSize: '1rem', fontWeight: 600 }}>
-                {error}
-              </div>
-              <div className="footer-note">
-                Tip: Check browser settings to allow location access for this site.
-              </div>
-            </div>
-          )}
+          <div className="actions">
+            <button
+              className="btn btn-ghost"
+              onClick={() => handleRefresh(false)}
+              disabled={loading}
+              aria-busy={loading ? 'true' : 'false'}
+              aria-label="Refresh weather"
+              title="Refresh"
+            >
+              {loading ? 'Refreshing...' : 'Refresh'}
+            </button>
+            {!coords && permission === 'denied' && (
+              <button
+                className="btn btn-primary"
+                onClick={() => handleRefresh(false)}
+              >
+                Retry Location
+              </button>
+            )}
+          </div>
+        </div>
 
-          <div className="cards" role="list">
-            <div className="card" role="listitem">
-              <div className="card-title">Temperature</div>
-              <div className="card-value" aria-live="polite">{temp}</div>
+        {error && (
+          <div className="card" role="alert" style={{ borderColor: 'rgba(239,68,68,0.35)' }}>
+            <div className="card-title" style={{ color: 'var(--error)' }}>
+              ⚠️ Error
             </div>
-            <div className="card" role="listitem">
-              <div className="card-title">Condition</div>
-              <div className="card-value">{condition}</div>
+            <div className="card-value" style={{ fontSize: '1rem', fontWeight: 600 }}>
+              {error}
             </div>
-            <div className="card" role="listitem">
-              <div className="card-title">Wind</div>
-              <div className="card-value">{wind}</div>
-              <div className="footer-note">Dir: {direction}</div>
-            </div>
-            <div className="card" role="listitem">
-              <div className="card-title">Humidity</div>
-              <div className="card-value">{humidity}</div>
+            <div className="footer-note">
+              Tip: Check browser settings to allow location access for this site.
             </div>
           </div>
-        </section>
+        )}
 
-        <p className="footer-note" style={{ marginTop: 10 }}>
-          Data by Open‑Meteo • Reverse geocoding by OpenStreetMap Nominatim
-        </p>
-      </main>
-    </div>
+        <div className="cards" role="list">
+          <div className="card" role="listitem">
+            <div className="card-title">Temperature</div>
+            <div className="card-value" aria-live="polite">{temp}</div>
+          </div>
+          <div className="card" role="listitem">
+            <div className="card-title">Condition</div>
+            <div className="card-value">{condition}</div>
+          </div>
+          <div className="card" role="listitem">
+            <div className="card-title">Wind</div>
+            <div className="card-value">{wind}</div>
+            <div className="footer-note">Dir: {direction}</div>
+          </div>
+          <div className="card" role="listitem">
+            <div className="card-title">Humidity</div>
+            <div className="card-value">{humidity}</div>
+          </div>
+        </div>
+      </section>
+
+      <p className="footer-note" style={{ marginTop: 10 }}>
+        Data by Open‑Meteo • Reverse geocoding by OpenStreetMap Nominatim
+      </p>
+    </main>
   );
 }
 
